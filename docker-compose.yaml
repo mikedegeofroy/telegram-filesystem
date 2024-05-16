@@ -1,0 +1,18 @@
+version: "3.8"
+services:
+  centos-filesystem-testing:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: centos-filesystem-testing
+    command: >
+      /bin/bash -c "/bin/bash && cd"
+    tty: true
+    volumes:
+      - ./:/root/customfs
+    networks:
+      - centos-network
+
+networks:
+  centos-network:
+    driver: bridge
