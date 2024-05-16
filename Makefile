@@ -5,7 +5,7 @@ all: build
 
 # Pull up docker container
 up:
-	docker-compose up -d --build
+	docker-compose up -d
 
 # Pull down docker container
 down:
