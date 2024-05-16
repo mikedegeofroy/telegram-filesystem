@@ -1,29 +1,19 @@
-# Use the CentOS 7 base image
-FROM  --platform=linux/amd64 centos:7
+# Use the Ubuntu 20.04 base image
+FROM ubuntu:20.04
 
-# Install necessary tools and libraries
-RUN yum -y update && \
-    yum -y install gcc-c++ make && \
-    yum -y groupinstall "Development Tools" && \
-    yum clean all
+# Enable all repositories and add the PPA for a newer GCC version
+RUN sed -i 's/# deb/deb/g' /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y software-properties-common && \
+    add-apt-repository ppa:ubuntu-toolchain-r/test && \
+    apt-get update && \
+    apt-get install -y gcc-10 cmake g++-10 wget make pkg-config libfuse-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN set -ex \
-    && for key in C6C265324BBEBDC350B513D02D2CEF1034921684; do \
-    gpg --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys "$key" || \
-    gpg --keyserver hkp://ipv4.pool.sks-keyservers.net --recv-keys "$key" || \
-    gpg --keyserver hkp://pgp.mit.edu:80 --recv-keys "$key" ; \
-    done
-
-ENV CMAKE_VERSION 3.8.2
-
-RUN set -ex \
-    && curl -fsSLO --compressed https://cmake.org/files/v3.8/cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz \
-    && curl -fsSLO --compressed https://cmake.org/files/v3.8/cmake-${CMAKE_VERSION}-SHA-256.txt.asc \
-    && curl -fsSLO --compressed https://cmake.org/files/v3.8/cmake-${CMAKE_VERSION}-SHA-256.txt \
-    && gpg --verify cmake-${CMAKE_VERSION}-SHA-256.txt.asc cmake-${CMAKE_VERSION}-SHA-256.txt \
-    && grep "cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz\$" cmake-${CMAKE_VERSION}-SHA-256.txt | sha256sum -c - \
-    && tar xzf cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz -C /usr/local --strip-components=1 --no-same-owner \
-    && rm -rf cmake-${CMAKE_VERSION}*
+# Update alternatives to use gcc-10 and g++-10
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 60 --slave /usr/bin/g++ g++ /usr/bin/g++-10 && \
+    update-alternatives --set gcc /usr/bin/gcc-10
 
 # Set the working directory
 WORKDIR /root

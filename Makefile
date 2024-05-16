@@ -13,15 +13,15 @@ down:
 
 # Acess container shell
 shell:
-	docker exec -it centos-filesystem-testing /bin/bash
+	docker exec -it ubuntu-filesystem-testing /bin/bash
 
 # Build the project inside the Docker container
 build:
-	docker-compose exec centos-filesystem-testing /bin/bash -c "cd /root/customfs && mkdir -p build && cd build && cmake .. && make"
+	docker-compose exec ubuntu-filesystem-testing /bin/bash -c "cd /root/customfs && mkdir -p build && cd build && cmake .. && make"
 
 # Clean the build directory
 clean:
-	docker-compose exec centos-filesystem-testing /bin/bash -c "cd /root/customfs && rm -rf build"
+	docker-compose exec ubuntu-filesystem-testing /bin/bash -c "cd /root/customfs && rm -rf build"
 
 build-local:
 	if [ ! -d build ]; then mkdir build; fi && cd build && cmake .. && make

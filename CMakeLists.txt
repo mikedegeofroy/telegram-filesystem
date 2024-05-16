@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8.2)
+cmake_minimum_required(VERSION 3.5.1)
 
 project(
     telegram-filesystem
@@ -7,5 +7,12 @@ project(
 )
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+find_package(PkgConfig REQUIRED)
+pkg_search_module(FUSE REQUIRED fuse)
+
+include_directories(${FUSE_INCLUDE_DIRS})
 
 add_subdirectory(src)

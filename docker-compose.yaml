@@ -1,18 +1,18 @@
 version: "3.8"
 services:
-  centos-filesystem-testing:
+  ubuntu-filesystem-testing:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: centos-filesystem-testing
+    container_name: ubuntu-filesystem-testing
     command: >
       /bin/bash -c "/bin/bash && cd"
     tty: true
     volumes:
       - ./:/root/customfs
     networks:
-      - centos-network
+      - ubuntu-network
 
 networks:
-  centos-network:
+  ubuntu-network:
     driver: bridge
