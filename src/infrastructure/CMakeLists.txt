@@ -1,0 +1,1 @@
+add_library(telegram-integration telegram-integration.cpp)

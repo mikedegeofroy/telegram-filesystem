@@ -8,6 +8,7 @@ services:
     command: >
       /bin/bash -c "/bin/bash && cd"
     tty: true
+    privileged: true
     volumes:
       - ./:/root/customfs
     networks:
