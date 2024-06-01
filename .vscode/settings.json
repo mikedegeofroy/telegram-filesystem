@@ -1,4 +1,5 @@
 {
+  "cmake.cmakePath": "/usr/bin/cmake",
   "files.associations": {
     "__bit_reference": "cpp",
     "__config": "cpp",
@@ -36,6 +37,31 @@
     "tuple": "cpp",
     "typeinfo": "cpp",
     "variant": "cpp",
-    "algorithm": "cpp"
+    "algorithm": "cpp",
+    "__hash_table": "cpp",
+    "__node_handle": "cpp",
+    "__split_buffer": "cpp",
+    "__tree": "cpp",
+    "array": "cpp",
+    "charconv": "cpp",
+    "complex": "cpp",
+    "condition_variable": "cpp",
+    "csignal": "cpp",
+    "deque": "cpp",
+    "execution": "cpp",
+    "fstream": "cpp",
+    "iomanip": "cpp",
+    "map": "cpp",
+    "optional": "cpp",
+    "queue": "cpp",
+    "set": "cpp",
+    "sstream": "cpp",
+    "unordered_map": "cpp",
+    "unordered_set": "cpp",
+    "vector": "cpp",
+    "memory": "cpp",
+    "functional": "cpp",
+    "future": "cpp",
+    "regex": "cpp"
   }
 }
