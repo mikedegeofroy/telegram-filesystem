@@ -25,7 +25,7 @@ TelegramFileSystemService::TelegramFileSystemService() {
 
 std::shared_ptr<FileSystemEntity> TelegramFileSystemService::getEntitiesInPath(
     const std::string& path) {
-  auto entities = telegram_integration_->searchChats("penis");
+  auto entities = telegram_integration_->searchChats(path);
 
   for (auto& entity : entities) {
     std::cout << entity.name << "\n";
@@ -35,4 +35,8 @@ std::shared_ptr<FileSystemEntity> TelegramFileSystemService::getEntitiesInPath(
   }
 
   return std::shared_ptr<FileSystemEntity>();
+}
+
+TelegramFileSystemService::~TelegramFileSystemService() {
+  std::cout << "destructor called TelegramFileSystemService\n";
 }

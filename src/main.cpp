@@ -7,9 +7,11 @@
 #include "application/TelegramFileSystemService.h"
 
 int main(int argc, char* argv[]) {
-  std::shared_ptr<IFileSystemService> fs(new TelegramFileSystemService);
+  std::unique_ptr<IFileSystemService> fs(new TelegramFileSystemService);
 
-  auto penis = fs->getEntitiesInPath("some path");
+  auto penis = fs->getEntitiesInPath("fs-");
+
+  std::cout << "end\n";
 
   return 0;
 }

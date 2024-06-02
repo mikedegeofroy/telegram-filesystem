@@ -7,7 +7,7 @@ RUN sed -i 's/# deb/deb/g' /etc/apt/sources.list && \
     apt-get install -y software-properties-common && \
     add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && \
-    apt-get install -y gcc-10 cmake g++-10 wget make pkg-config libfuse-dev git gperf zlib1g-dev libssl-dev php-cli && \
+    apt-get install -y gcc-10 cmake g++-10 wget make pkg-config libfuse-dev git gperf zlib1g-dev libssl-dev php-cli gdb && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

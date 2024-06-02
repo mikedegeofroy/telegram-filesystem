@@ -97,6 +97,7 @@ class TelegramIntegration : public ITelegramIntegration {
     if (it != handlers_.end()) {
       std::cout << "found handler\n";
       it->second(std::move(response.object));
+      std::cout << "handled this fucker\n";
       handlers_.erase(it);
     }
     std::cout << "handled this fucker\n";
@@ -291,26 +292,49 @@ class TelegramIntegration : public ITelegramIntegration {
     send_query(td_api::make_object<td_api::getOption>("version"), {});
   }
 
+  Chat getChat(int64_t chat_id) {
+    Chat result;
+    std::promise<void> promise;
+    auto future = promise.get_future();
+
+    send_query(td_api::make_object<td_api::getChat>(chat_id),
+               [&](Object object) {
+                 if (object->get_id() == td_api::error::ID) {
+                   promise.set_value();
+                   return;
+                 }
+                 auto chat = td::move_tl_object_as<td_api::chat>(object);
+
+                 result.name = chat->title_;
+                 //  result.messages = getChatMessages(chat_id);
+
+                 promise.set_value();
+               });
+
+    future.wait();
+
+    return result;
+  }
+
   std::vector<Chat> searchChats(const std::string &query) {
     std::vector<Chat> results;
     std::promise<void> promise;
     auto future = promise.get_future();
 
-    send_query(td_api::make_object<td_api::getChats>(nullptr, 100),
-               [this, &results, &promise](Object object) {
+    send_query(td_api::make_object<td_api::searchChatsOnServer>(query, 100),
+               [&](Object object) {
                  if (object->get_id() == td_api::error::ID) {
                    promise.set_value();
                    return;
                  }
                  auto chats = td::move_tl_object_as<td_api::chats>(object);
-                 bool kill = false;
+
                  for (auto chat_id : chats->chat_ids_) {
-                   kill = true;
-                   Chat chat = {.name = std::to_string(chat_id),
-                                .messages = getChatMessages(chat_id)};
-                   results.push_back(chat);
-                   if (kill) break;
+                   if (chat_id > 0) continue;
+                   Chat test = getChat(chat_id);
+                   results.push_back(test);
                  }
+
                  promise.set_value();
                });
 
@@ -322,48 +346,34 @@ class TelegramIntegration : public ITelegramIntegration {
   std::vector<Message> getChatMessages(int64_t chat_id) {
     std::cout << "Getting chat messages for " << chat_id << "\n";
     std::vector<Message> results;
-
-    Message message = {.content = "fuck you"};
-
-    results.push_back(message);
-    results.push_back(message);
-    results.push_back(message);
-
-    return results;
-  }
-
-  std::vector<Message> getChatMessages(int64_t chat_id, int64_t from_message_id,
-                                       int32_t limit) {
-    std::vector<Message> results;
     std::promise<void> promise;
+
     auto future = promise.get_future();
 
     send_query(
-        td_api::make_object<td_api::getChatHistory>(chat_id, from_message_id, 0,
-                                                    limit, false),
-        [this, &results, &promise](Object object) mutable {
+        td_api::make_object<td_api::getChatHistory>(chat_id, 0, 0, 100, false),
+        [&](Object object) {
           if (object->get_id() == td_api::error::ID) {
-            auto error = td::move_tl_object_as<td_api::error>(object);
-            std::cerr << "Error getting chat history: " << error->message_
-                      << "\n";
             promise.set_value();
             return;
           }
 
-          auto history = td::move_tl_object_as<td_api::messages>(object);
-          for (auto &message : history->messages_) {
-            std::string text;
+          auto messages = td::move_tl_object_as<td_api::messages>(object);
+
+          for (auto &message : messages->messages_) {
             if (message->content_->get_id() == td_api::messageText::ID) {
+              std::string text;
               text = static_cast<td_api::messageText &>(*message->content_)
                          .text_->text_;
               Message my_message = {.content = text};
               results.push_back(my_message);
             }
           }
+
           promise.set_value();
         });
 
-    future.wait();  // Wait for the async operation to complete
+    future.wait();
 
     return results;
   }
@@ -402,5 +412,8 @@ class TelegramIntegration : public ITelegramIntegration {
     }
   }
 
-  ~TelegramIntegration() { stop_event_loop(); }
+  ~TelegramIntegration() {
+    std::cout << "Destructor called on TelegramIntegration\n";
+    stop_event_loop();
+  }
 };
