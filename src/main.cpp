@@ -9,48 +9,76 @@
 #include "./application/models/Directory.h"
 #include "./infrastructure/TelegramIntegration.h"
 
-class MyFuseOperations {
- public:
-  static std::shared_ptr<TelegramFileSystemService> fs;
+// class MyFuseOperations {
+//  public:
+//   static std::shared_ptr<TelegramFileSystemService> fs;
 
-  static void initialize(std::shared_ptr<TelegramFileSystemService> service) {
-    fs = service;
-  }
+//   static void* initialize(struct fuse_conn_info* conn) {
+//     std::shared_ptr<ITelegramIntegration> telegram_integration(
+//         new TelegramIntegration());
+//     fs = std::make_shared<TelegramFileSystemService>(telegram_integration);
+//   }
 
-  static int myfs_getattr(const char *path, struct stat *stbuf) {
-    stbuf->st_mode = S_IFDIR | 00400;
-    return 0;
-  }
+//   static int myfs_getattr(const char* path, struct stat* stbuf) {
+//     stbuf->st_mode = S_IFDIR | 0755;
+//     return 0;
+//   }
 
-  static int myfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-                          off_t offset, struct fuse_file_info *fi) {
-    auto root = fs->getEntitiesInPath("fs");
+//   static int myfs_readdir(const char* path, void* buf, fuse_fill_dir_t
+//   filler,
+//                           off_t offset, struct fuse_file_info* fi) {
+//     filler(buf, ".", NULL, 0);
+//     filler(buf, "..", NULL, 0);
 
-    std::shared_ptr<Directory> d = std::dynamic_pointer_cast<Directory>(root);
-    if (d != nullptr) {
-      for (auto &entity : d->entities) {
-        filler(buf, entity->name.c_str(), NULL, 0);
-      }
-    }
+//     auto root = fs->getEntitiesInPath("fs");
 
-    return 0;
-  }
-};
+//     std::shared_ptr<Directory> d =
+//     std::dynamic_pointer_cast<Directory>(root); if (d != nullptr) {
+//       for (auto& entity : d->entities) {
+//         filler(buf, entity->name.c_str(), NULL, 0);
+//       }
+//     }
 
-// Definition of the static member
-std::shared_ptr<TelegramFileSystemService> MyFuseOperations::fs;
+//     return 0;
+//   }
+// };
 
-static struct fuse_operations myOperations = {
-    .getattr = MyFuseOperations::myfs_getattr,
-    .readdir = MyFuseOperations::myfs_readdir};
+// std::shared_ptr<TelegramFileSystemService> MyFuseOperations::fs;
 
-int main(int argc, char *argv[]) {
+// static struct fuse_operations myOperations = {};
+
+int main(int argc, char* argv[]) {
   std::shared_ptr<ITelegramIntegration> telegram_integration(
       new TelegramIntegration());
+
   std::shared_ptr<TelegramFileSystemService> fs(
       new TelegramFileSystemService(telegram_integration));
 
-  MyFuseOperations::initialize(fs);
+  auto root = fs->getEntitiesInPath("fs-");
+  std::shared_ptr<Directory> d = std::dynamic_pointer_cast<Directory>(root);
 
-  return fuse_main(argc, argv, &myOperations, NULL);
+  if (d != nullptr) {
+    for (auto& entity : d->entities) {
+      std::cout << entity->name << " : " << entity->path << "\n";
+      std::shared_ptr<Directory> dir =
+          std::dynamic_pointer_cast<Directory>(entity);
+      if (dir != nullptr) {
+        for (auto& dir_entity : dir->entities) {
+          std::shared_ptr<File> file =
+              std::dynamic_pointer_cast<File>(dir_entity);
+          if (file != nullptr) {
+            std::cout << file->local_path << "\n";
+          }
+        }
+      }
+    }
+  }
+  // telegram_integration->auth_loop();
+
+  // myOperations.init = MyFuseOperations::initialize;
+  // myOperations.getattr = MyFuseOperations::myfs_getattr;
+  // myOperations.readdir = MyFuseOperations::myfs_readdir;
+
+  // return fuse_main(argc, argv, &myOperations, NULL);
+  return 0;
 }

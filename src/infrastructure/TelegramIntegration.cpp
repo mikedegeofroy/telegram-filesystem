@@ -1,10 +1,10 @@
 #include "TelegramIntegration.h"
+
 #include <functional>
 // #include <future>
 #include <iostream>
 #include <regex>
 #include <sstream>
-
 
 void TelegramIntegration::restart() {
   stop_event_loop();
@@ -15,8 +15,7 @@ void TelegramIntegration::restart() {
 }
 
 void TelegramIntegration::send_query(td_api::object_ptr<td_api::Function> f,
-                                     std::shared_ptr<Query> query)
-{
+                                     std::shared_ptr<Query> query) {
   auto query_id = next_query_id();
   if (query) handlers_.emplace(query_id, query);
 
@@ -241,15 +240,18 @@ std::vector<Message> TelegramIntegration::getChatMessages(int64_t chat_id,
     }
 
     auto messages = td::move_tl_object_as<td_api::messages>(object);
-
     bool are_messages_empty = messages->messages_.empty();
 
     for (auto &message : messages->messages_) {
-      if (message->content_->get_id() == td_api::messageText::ID) {
-        std::string text =
-            static_cast<td_api::messageText &>(*message->content_).text_->text_;
+      if (message->content_->get_id() == td_api::messageDocument::ID) {
+        auto &document_message =
+            static_cast<td_api::messageDocument &>(*message->content_);
         int64_t id = message->id_;
-        Message my_message = {.id = id, .content = text};
+        std::string text = document_message.caption_->text_;
+        std::string document = downloadFile(document_message.document_->ID);
+
+        Message my_message = {
+            .id = id, .content = text, .attachment = document};
         results.push_back(my_message);
       }
     }
@@ -269,6 +271,26 @@ std::vector<Message> TelegramIntegration::getChatMessages(int64_t chat_id,
   query->wait();
 
   return results;
+}
+
+std::string TelegramIntegration::downloadFile(int32_t file_id) {
+  std::string local_path;
+
+  std::shared_ptr<Query> query(new Query([&](Object object) {
+    if (object->get_id() == td_api::error::ID) {
+      return;
+    }
+
+    auto file = td::move_tl_object_as<td_api::file>(object);
+    local_path = file->local_->path_;
+  }));
+
+  send_query(td_api::make_object<td_api::downloadFile>(file_id, 1, 0, 0, true),
+             query);
+
+  query->wait();
+
+  return local_path;
 }
 
 void TelegramIntegration::start_event_loop() {

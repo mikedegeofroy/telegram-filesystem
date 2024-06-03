@@ -11,7 +11,9 @@ class TelegramFileSystemService : public IFileSystemService {
  private:
   std::shared_ptr<ITelegramIntegration> telegram_integration_;
   std::vector<std::string> split_path(const std::string& path);
-  File* string_to_file(const std::string& content, const std::string& root_dir);
+  File* string_to_file(const std::string& content,
+                       const std::string& local_path,
+                       const std::string& root_dir);
 
  public:
   TelegramFileSystemService(

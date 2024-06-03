@@ -1,8 +1,9 @@
 #include "TelegramFileSystemService.h"
 
-#include "./models/Directory.h"
 #include <regex>
 #include <sstream>
+
+#include "./models/Directory.h"
 
 std::vector<std::string> TelegramFileSystemService::split_path(
     const std::string& path) {
@@ -19,6 +20,7 @@ std::vector<std::string> TelegramFileSystemService::split_path(
 }
 
 File* TelegramFileSystemService::string_to_file(const std::string& input,
+                                                const std::string& local_path,
                                                 const std::string& root_dir) {
   std::string path;
   std::string filename;
@@ -43,11 +45,13 @@ File* TelegramFileSystemService::string_to_file(const std::string& input,
   file->name = filename;
   file->path = root_dir + path;
   file->size = size;
+  file->local_path = local_path;
 
   return file;
 }
 
-TelegramFileSystemService::TelegramFileSystemService(std::shared_ptr<ITelegramIntegration> telegram_integration) {
+TelegramFileSystemService::TelegramFileSystemService(
+    std::shared_ptr<ITelegramIntegration> telegram_integration) {
   telegram_integration_ = telegram_integration;
   telegram_integration_->auth_loop();
   telegram_integration_->start_event_loop();
@@ -66,7 +70,8 @@ std::shared_ptr<FileSystemEntity> TelegramFileSystemService::getEntitiesInPath(
     dir->path = "/" + chat.name;
 
     for (auto& message : chat.messages) {
-      std::shared_ptr<File> file(string_to_file(message.content, dir->path));
+      std::shared_ptr<File> file(
+          string_to_file(message.content, message.attachment, dir->path));
       dir->entities.push_back(file);
     }
 

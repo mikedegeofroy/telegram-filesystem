@@ -80,6 +80,8 @@ class TelegramIntegration : public ITelegramIntegration {
 
   std::vector<Message> getChatMessages(int64_t chat_id, int64_t from_id = 0);
 
+  std::string downloadFile(int32_t file_id);
+
   void start_event_loop();
 
   void stop_event_loop();

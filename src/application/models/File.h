@@ -4,5 +4,5 @@
 #include "FileSystemEntity.h"
 
 struct File : public FileSystemEntity {
-  std::ifstream data;
+  std::string local_path;
 };
