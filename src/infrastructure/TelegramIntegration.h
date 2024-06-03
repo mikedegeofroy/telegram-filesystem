@@ -286,7 +286,6 @@ class TelegramIntegration : public ITelegramIntegration {
   };
 
   std::vector<Message> getChatMessages(int64_t chat_id, int64_t from_id = 0) {
-    std::cout << "Getting chat messages for " << chat_id << "\n";
     std::vector<Message> results;
 
     std::shared_ptr<Query> query(new Query([&](Object object) {

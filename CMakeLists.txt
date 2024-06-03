@@ -10,8 +10,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# find_package(PkgConfig REQUIRED)
-# pkg_search_module(FUSE REQUIRED fuse)
+find_package(PkgConfig REQUIRED)
+pkg_search_module(FUSE REQUIRED fuse)
 
 add_compile_options(-Wall -Weffc++ -pedantic -std=c++0x)
 

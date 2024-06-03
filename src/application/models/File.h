@@ -3,4 +3,6 @@
 
 #include "FileSystemEntity.h"
 
-struct File : public FileSystemEntity {};
+struct File : public FileSystemEntity {
+  std::ifstream data;
+};
