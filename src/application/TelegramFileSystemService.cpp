@@ -2,6 +2,7 @@
 
 #include "./models/Directory.h"
 #include <regex>
+#include <sstream>
 
 std::vector<std::string> TelegramFileSystemService::split_path(
     const std::string& path) {

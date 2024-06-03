@@ -1,11 +1,13 @@
 #define FUSE_USE_VERSION 26
+#define FUSE_DEFAULT_MAX_BACKGROUND 120
 #include <fuse.h>
+
 #include <iostream>
+#include <memory>
 
 #include "./application/TelegramFileSystemService.h"
 #include "./application/models/Directory.h"
 #include "./infrastructure/TelegramIntegration.h"
-
 
 class MyFuseOperations {
  public:
@@ -24,9 +26,8 @@ class MyFuseOperations {
                           off_t offset, struct fuse_file_info *fi) {
     auto root = fs->getEntitiesInPath("fs");
 
-    if (std::shared_ptr<Directory> d =
-            std::dynamic_pointer_cast<Directory>(root);
-        d != nullptr) {
+    std::shared_ptr<Directory> d = std::dynamic_pointer_cast<Directory>(root);
+    if (d != nullptr) {
       for (auto &entity : d->entities) {
         filler(buf, entity->name.c_str(), NULL, 0);
       }
@@ -35,6 +36,9 @@ class MyFuseOperations {
     return 0;
   }
 };
+
+// Definition of the static member
+std::shared_ptr<TelegramFileSystemService> MyFuseOperations::fs;
 
 static struct fuse_operations myOperations = {
     .getattr = MyFuseOperations::myfs_getattr,

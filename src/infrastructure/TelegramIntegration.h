@@ -1,7 +1,7 @@
 #pragma once
 #include <td/telegram/Client.h>
-// #include <td/telegram/td_api.h>
-// #include <td/telegram/td_api.hpp>
+#include <td/telegram/td_api.h>
+#include <td/telegram/td_api.hpp>
 
 #include <cstdint>
 #include <map>
