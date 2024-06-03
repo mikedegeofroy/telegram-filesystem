@@ -5,10 +5,10 @@
       "name": "Docker C++ Debug",
       "type": "cppdbg",
       "request": "launch",
-      "program": "/app/your_executable",  // Update with the path to your executable
+      "program": "/workspaces/telegram-filesystem/build/src/telegram-filesystem",  // Update with the path to your executable
       "args": [],
       "stopAtEntry": false,
-      "cwd": "/app",
+      "cwd": "/workspaces/telegram-filesystem/build/src/",
       "environment": [],
       "externalConsole": false,
       "MIMode": "gdb",
