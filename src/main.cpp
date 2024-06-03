@@ -1,17 +1,12 @@
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
 
-#include <iostream>
-#include <memory>
+#include "./application/TelegramFileSystemService.h"
 
-#include "application/TelegramFileSystemService.h"
+int main(int argc, char* argv[]) { 
+  std::shared_ptr<TelegramFileSystemService> fs(new TelegramFileSystemService);
 
-int main(int argc, char* argv[]) {
-  std::unique_ptr<IFileSystemService> fs(new TelegramFileSystemService);
+  fs->getEntitiesInPath("fs");
 
-  auto penis = fs->getEntitiesInPath("fs-");
-
-  std::cout << "end\n";
-
-  return 0;
-}
+  return 0; 
+  }

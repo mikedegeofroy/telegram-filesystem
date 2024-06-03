@@ -37,6 +37,4 @@ std::shared_ptr<FileSystemEntity> TelegramFileSystemService::getEntitiesInPath(
   return std::shared_ptr<FileSystemEntity>();
 }
 
-TelegramFileSystemService::~TelegramFileSystemService() {
-  std::cout << "destructor called TelegramFileSystemService\n";
-}
+TelegramFileSystemService::~TelegramFileSystemService() {}

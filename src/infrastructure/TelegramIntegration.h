@@ -16,11 +16,7 @@
 #include <vector>
 
 #include "../application/abstractions/ITelegramIntegration.h"
-
-// Simple single-threaded example of TDLib usage.
-// Real world programs should use separate thread for the user input.
-// Example includes user authentication, receiving updates, getting chat list
-// and sending text messages.
+#include "./Query.h"
 
 // overloaded
 namespace detail {
@@ -52,13 +48,12 @@ class TelegramIntegration : public ITelegramIntegration {
   std::int32_t client_id_{0};
 
   td_api::object_ptr<td_api::AuthorizationState> authorization_state_;
-  bool are_authorized_{false};
-  bool need_restart_{false};
   std::uint64_t current_query_id_{0};
   std::uint64_t authentication_query_id_{0};
+  bool are_authorized_{false};
+  bool need_restart_{false};
 
-  std::map<std::uint64_t, std::function<void(Object)>> handlers_;
-
+  std::map<std::uint64_t, std::shared_ptr<Query>> handlers_;
   std::map<std::int64_t, td_api::object_ptr<td_api::user>> users_;
 
   std::map<std::int64_t, std::string> chat_title_;
@@ -75,52 +70,28 @@ class TelegramIntegration : public ITelegramIntegration {
   }
 
   void send_query(td_api::object_ptr<td_api::Function> f,
-                  std::function<void(Object)> handler) {
+                  std::shared_ptr<Query> query) {
     auto query_id = next_query_id();
-    if (handler) {
-      handlers_.emplace(query_id, std::move(handler));
-    }
+    if (query) handlers_.emplace(query_id, query);
+
     client_manager_->send(client_id_, query_id, std::move(f));
   }
 
   void process_response(td::ClientManager::Response response) {
-    std::cout << "Received response with id: " << response.request_id << "\n";
     if (!response.object) {
-      std::cout << "Received empty response object.\n";
       return;
     }
     if (response.request_id == 0) {
       return process_update(std::move(response.object));
     }
-    std::cout << "started handling this fucker\n";
     auto it = handlers_.find(response.request_id);
     if (it != handlers_.end()) {
-      std::cout << "found handler\n";
-      it->second(std::move(response.object));
-      std::cout << "handled this fucker\n";
+      it->second->handle(std::move(response.object));
       handlers_.erase(it);
     }
-    std::cout << "handled this fucker\n";
-  }
-
-  std::string get_user_name(std::int64_t user_id) const {
-    auto it = users_.find(user_id);
-    if (it == users_.end()) {
-      return "unknown user";
-    }
-    return it->second->first_name_ + " " + it->second->last_name_;
-  }
-
-  std::string get_chat_title(std::int64_t chat_id) const {
-    auto it = chat_title_.find(chat_id);
-    if (it == chat_title_.end()) {
-      return "unknown chat";
-    }
-    return it->second;
   }
 
   void process_update(td_api::object_ptr<td_api::Object> update) {
-    std::cout << "Processing update\n";
     td_api::downcast_call(
         *update,
         overloaded(
@@ -129,41 +100,6 @@ class TelegramIntegration : public ITelegramIntegration {
               authorization_state_ =
                   std::move(update_authorization_state.authorization_state_);
               on_authorization_state_update();
-            },
-            [this](td_api::updateNewChat &update_new_chat) {
-              chat_title_[update_new_chat.chat_->id_] =
-                  update_new_chat.chat_->title_;
-            },
-            [this](td_api::updateChatTitle &update_chat_title) {
-              chat_title_[update_chat_title.chat_id_] =
-                  update_chat_title.title_;
-            },
-            [this](td_api::updateUser &update_user) {
-              auto user_id = update_user.user_->id_;
-              users_[user_id] = std::move(update_user.user_);
-            },
-            [this](td_api::updateNewMessage &update_new_message) {
-              auto chat_id = update_new_message.message_->chat_id_;
-              std::string sender_name;
-              td_api::downcast_call(
-                  *update_new_message.message_->sender_id_,
-                  overloaded(
-                      [this, &sender_name](td_api::messageSenderUser &user) {
-                        sender_name = get_user_name(user.user_id_);
-                      },
-                      [this, &sender_name](td_api::messageSenderChat &chat) {
-                        sender_name = get_chat_title(chat.chat_id_);
-                      }));
-              std::string text;
-              if (update_new_message.message_->content_->get_id() ==
-                  td_api::messageText::ID) {
-                text = static_cast<td_api::messageText &>(
-                           *update_new_message.message_->content_)
-                           .text_->text_;
-              }
-              std::cout << "Receive message: [chat_id:" << chat_id
-                        << "] [from:" << sender_name << "] [" << text << "]"
-                        << std::endl;
             },
             [](auto &update) {}));
   }
@@ -201,37 +137,45 @@ class TelegramIntegration : public ITelegramIntegration {
               std::cout << "Enter phone number: " << std::flush;
               std::string phone_number;
               std::cin >> phone_number;
+              std::shared_ptr<Query> query(
+                  new Query(create_authentication_query_handler()));
               send_query(
                   td_api::make_object<td_api::setAuthenticationPhoneNumber>(
                       phone_number, nullptr),
-                  create_authentication_query_handler());
+                  query);
             },
             [this](td_api::authorizationStateWaitEmailAddress &) {
               std::cout << "Enter email address: " << std::flush;
               std::string email_address;
               std::cin >> email_address;
+              std::shared_ptr<Query> query(
+                  new Query(create_authentication_query_handler()));
               send_query(
                   td_api::make_object<td_api::setAuthenticationEmailAddress>(
                       email_address),
-                  create_authentication_query_handler());
+                  query);
             },
             [this](td_api::authorizationStateWaitEmailCode &) {
               std::cout << "Enter email authentication code: " << std::flush;
               std::string code;
               std::cin >> code;
+              std::shared_ptr<Query> query(
+                  new Query(create_authentication_query_handler()));
               send_query(
                   td_api::make_object<td_api::checkAuthenticationEmailCode>(
                       td_api::make_object<
                           td_api::emailAddressAuthenticationCode>(code)),
-                  create_authentication_query_handler());
+                  query);
             },
             [this](td_api::authorizationStateWaitCode &) {
               std::cout << "Enter authentication code: " << std::flush;
               std::string code;
               std::cin >> code;
+              std::shared_ptr<Query> query(
+                  new Query(create_authentication_query_handler()));
               send_query(
                   td_api::make_object<td_api::checkAuthenticationCode>(code),
-                  create_authentication_query_handler());
+                  query);
             },
             [this](td_api::authorizationStateWaitRegistration &) {
               std::string first_name;
@@ -240,18 +184,23 @@ class TelegramIntegration : public ITelegramIntegration {
               std::cin >> first_name;
               std::cout << "Enter your last name: " << std::flush;
               std::cin >> last_name;
+
+              std::shared_ptr<Query> query(
+                  new Query(create_authentication_query_handler()));
               send_query(td_api::make_object<td_api::registerUser>(
                              first_name, last_name, false),
-                         create_authentication_query_handler());
+                         query);
             },
             [this](td_api::authorizationStateWaitPassword &) {
               std::cout << "Enter authentication password: " << std::flush;
               std::string password;
               std::getline(std::cin, password);
+              std::shared_ptr<Query> query(
+                  new Query(create_authentication_query_handler()));
               send_query(
                   td_api::make_object<td_api::checkAuthenticationPassword>(
                       password),
-                  create_authentication_query_handler());
+                  query);
             },
             [this](
                 td_api::authorizationStateWaitOtherDeviceConfirmation &state) {
@@ -268,8 +217,9 @@ class TelegramIntegration : public ITelegramIntegration {
               request->system_language_code_ = "en";
               request->device_model_ = "Desktop";
               request->application_version_ = "1.0";
-              send_query(std::move(request),
-                         create_authentication_query_handler());
+              std::shared_ptr<Query> query(
+                  new Query(create_authentication_query_handler()));
+              send_query(std::move(request), query);
             }));
   }
 
@@ -294,86 +244,84 @@ class TelegramIntegration : public ITelegramIntegration {
 
   Chat getChat(int64_t chat_id) {
     Chat result;
-    std::promise<void> promise;
-    auto future = promise.get_future();
 
-    send_query(td_api::make_object<td_api::getChat>(chat_id),
-               [&](Object object) {
-                 if (object->get_id() == td_api::error::ID) {
-                   promise.set_value();
-                   return;
-                 }
-                 auto chat = td::move_tl_object_as<td_api::chat>(object);
+    std::shared_ptr<Query> query(new Query([&](Object object) {
+      if (object->get_id() == td_api::error::ID) {
+        return;
+      }
+      auto chat = td::move_tl_object_as<td_api::chat>(object);
 
-                 result.name = chat->title_;
-                 //  result.messages = getChatMessages(chat_id);
+      result.name = chat->title_;
+      result.messages = getChatMessages(chat_id);
+    }));
 
-                 promise.set_value();
-               });
-
-    future.wait();
+    send_query(td_api::make_object<td_api::getChat>(chat_id), query);
+    query->wait();
 
     return result;
   }
 
-  std::vector<Chat> searchChats(const std::string &query) {
+  std::vector<Chat> searchChats(const std::string &string) {
     std::vector<Chat> results;
-    std::promise<void> promise;
-    auto future = promise.get_future();
 
-    send_query(td_api::make_object<td_api::searchChatsOnServer>(query, 100),
-               [&](Object object) {
-                 if (object->get_id() == td_api::error::ID) {
-                   promise.set_value();
-                   return;
-                 }
-                 auto chats = td::move_tl_object_as<td_api::chats>(object);
+    std::shared_ptr<Query> query(new Query([&](Object object) {
+      if (object->get_id() == td_api::error::ID) {
+        return;
+      }
+      auto chats = td::move_tl_object_as<td_api::chats>(object);
 
-                 for (auto chat_id : chats->chat_ids_) {
-                   if (chat_id > 0) continue;
-                   Chat test = getChat(chat_id);
-                   results.push_back(test);
-                 }
+      for (auto chat_id : chats->chat_ids_) {
+        if (chat_id > 0) continue;
+        Chat test = getChat(chat_id);
+        results.push_back(test);
+      }
+    }));
 
-                 promise.set_value();
-               });
+    send_query(td_api::make_object<td_api::searchChatsOnServer>(string, 100),
+               query);
 
-    future.wait();
+    query->wait();
 
     return results;
   };
 
-  std::vector<Message> getChatMessages(int64_t chat_id) {
+  std::vector<Message> getChatMessages(int64_t chat_id, int64_t from_id = 0) {
     std::cout << "Getting chat messages for " << chat_id << "\n";
     std::vector<Message> results;
-    std::promise<void> promise;
 
-    auto future = promise.get_future();
+    std::shared_ptr<Query> query(new Query([&](Object object) {
+      if (object->get_id() == td_api::error::ID) {
+        return;
+      }
 
-    send_query(
-        td_api::make_object<td_api::getChatHistory>(chat_id, 0, 0, 100, false),
-        [&](Object object) {
-          if (object->get_id() == td_api::error::ID) {
-            promise.set_value();
-            return;
-          }
+      auto messages = td::move_tl_object_as<td_api::messages>(object);
 
-          auto messages = td::move_tl_object_as<td_api::messages>(object);
+      bool are_messages_empty = messages->messages_.empty();
 
-          for (auto &message : messages->messages_) {
-            if (message->content_->get_id() == td_api::messageText::ID) {
-              std::string text;
-              text = static_cast<td_api::messageText &>(*message->content_)
-                         .text_->text_;
-              Message my_message = {.content = text};
-              results.push_back(my_message);
-            }
-          }
+      for (auto &message : messages->messages_) {
+        if (message->content_->get_id() == td_api::messageText::ID) {
+          std::string text =
+              static_cast<td_api::messageText &>(*message->content_)
+                  .text_->text_;
+          int64_t id = message->id_;
+          Message my_message = {.id = id, .content = text};
+          results.push_back(my_message);
+        }
+      }
 
-          promise.set_value();
-        });
+      if (!are_messages_empty) {
+        std::vector<Message> remaining =
+            getChatMessages(chat_id, messages->messages_.back()->id_);
 
-    future.wait();
+        results.insert(results.end(), remaining.begin(), remaining.end());
+      };
+    }));
+
+    send_query(td_api::make_object<td_api::getChatHistory>(chat_id, from_id, 0,
+                                                           100, false),
+               query);
+
+    query->wait();
 
     return results;
   }
@@ -382,11 +330,9 @@ class TelegramIntegration : public ITelegramIntegration {
     event_loop_thread_ = std::thread([this]() {
       while (running_) {
         auto response = client_manager_->receive(10);
-        std::cout << "Event loop iteration\n";
         if (response.object) {
           process_response(std::move(response));
         }
-        std::cout << running_ << "\n";
       }
     });
   }
@@ -412,8 +358,5 @@ class TelegramIntegration : public ITelegramIntegration {
     }
   }
 
-  ~TelegramIntegration() {
-    std::cout << "Destructor called on TelegramIntegration\n";
-    stop_event_loop();
-  }
+  ~TelegramIntegration() { stop_event_loop(); }
 };
