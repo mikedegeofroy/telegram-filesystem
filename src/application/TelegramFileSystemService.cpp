@@ -1,7 +1,7 @@
 #include "TelegramFileSystemService.h"
 
 #include "./models/Directory.h"
-#include "./models/FileSystemEntity.h"
+#include <regex>
 
 std::vector<std::string> TelegramFileSystemService::split_path(
     const std::string& path) {
@@ -46,9 +46,8 @@ File* TelegramFileSystemService::string_to_file(const std::string& input,
   return file;
 }
 
-TelegramFileSystemService::TelegramFileSystemService() {
-  telegram_integration_ =
-      std::shared_ptr<ITelegramIntegration>(new TelegramIntegration());
+TelegramFileSystemService::TelegramFileSystemService(std::shared_ptr<ITelegramIntegration> telegram_integration) {
+  telegram_integration_ = telegram_integration;
   telegram_integration_->auth_loop();
   telegram_integration_->start_event_loop();
 }

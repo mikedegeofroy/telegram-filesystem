@@ -1,13 +1,11 @@
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
+#include <iostream>
 
 #include "./application/TelegramFileSystemService.h"
 #include "./application/models/Directory.h"
+#include "./infrastructure/TelegramIntegration.h"
 
-#define FUSE_USE_VERSION 26
-#include <fuse.h>
-
-#include <iostream>
 
 class MyFuseOperations {
  public:
@@ -24,7 +22,6 @@ class MyFuseOperations {
 
   static int myfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                           off_t offset, struct fuse_file_info *fi) {
-
     auto root = fs->getEntitiesInPath("fs");
 
     if (std::shared_ptr<Directory> d =
@@ -44,7 +41,10 @@ static struct fuse_operations myOperations = {
     .readdir = MyFuseOperations::myfs_readdir};
 
 int main(int argc, char *argv[]) {
-  std::shared_ptr<TelegramFileSystemService> fs(new TelegramFileSystemService);
+  std::shared_ptr<ITelegramIntegration> telegram_integration(
+      new TelegramIntegration());
+  std::shared_ptr<TelegramFileSystemService> fs(
+      new TelegramFileSystemService(telegram_integration));
 
   MyFuseOperations::initialize(fs);
 

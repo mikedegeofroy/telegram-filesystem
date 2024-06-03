@@ -1,4 +1,4 @@
-add_library(telegram-integration TelegramIntegration.h)
+add_library(telegram-integration TelegramIntegration.cpp)
 
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}/external/td")
 

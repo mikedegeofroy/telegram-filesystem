@@ -1,11 +1,10 @@
 #pragma once
 
 #include <memory>
-#include <regex>;
 #include <string>
 #include <vector>
 
-#include "../infrastructure/TelegramIntegration.h"
+#include "./abstractions/ITelegramIntegration.h"
 #include "contracts/IFileSystemService.h"
 
 class TelegramFileSystemService : public IFileSystemService {
@@ -15,7 +14,8 @@ class TelegramFileSystemService : public IFileSystemService {
   File* string_to_file(const std::string& content, const std::string& root_dir);
 
  public:
-  TelegramFileSystemService();
+  TelegramFileSystemService(
+      std::shared_ptr<ITelegramIntegration> telegram_integration);
   std::shared_ptr<FileSystemEntity> getEntitiesInPath(const std::string& path);
   ~TelegramFileSystemService();
 };
