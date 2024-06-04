@@ -243,13 +243,23 @@ std::vector<Message> TelegramIntegration::getChatMessages(int64_t chat_id,
     bool are_messages_empty = messages->messages_.empty();
 
     for (auto &message : messages->messages_) {
+      int64_t id = message->id_;
+      std::string text;
+      std::string document;
+
       if (message->content_->get_id() == td_api::messageDocument::ID) {
         auto &document_message =
             static_cast<td_api::messageDocument &>(*message->content_);
-        int64_t id = message->id_;
-        std::string text = document_message.caption_->text_;
-        std::string document = downloadFile(document_message.document_->ID);
+        text = document_message.caption_->text_;
+        document = download_file(document_message.document_->document_->id_);
+      } else if (message->content_->get_id() == td_api::messageText::ID) {
+        auto &text_message =
+            static_cast<td_api::messageText &>(*message->content_);
+        text = text_message.text_->text_;
+      }
 
+      // Create the message object only if text or document is present
+      if (!text.empty() || !document.empty()) {
         Message my_message = {
             .id = id, .content = text, .attachment = document};
         results.push_back(my_message);
@@ -259,21 +269,19 @@ std::vector<Message> TelegramIntegration::getChatMessages(int64_t chat_id,
     if (!are_messages_empty) {
       std::vector<Message> remaining =
           getChatMessages(chat_id, messages->messages_.back()->id_);
-
       results.insert(results.end(), remaining.begin(), remaining.end());
-    };
+    }
   }));
 
   send_query(td_api::make_object<td_api::getChatHistory>(chat_id, from_id, 0,
                                                          100, false),
              query);
-
   query->wait();
 
   return results;
 }
 
-std::string TelegramIntegration::downloadFile(int32_t file_id) {
+std::string TelegramIntegration::download_file(int32_t file_id) {
   std::string local_path;
 
   std::shared_ptr<Query> query(new Query([&](Object object) {
@@ -292,6 +300,8 @@ std::string TelegramIntegration::downloadFile(int32_t file_id) {
 
   return local_path;
 }
+
+void TelegramIntegration::send_message(Chat chat) {}
 
 void TelegramIntegration::start_event_loop() {
   event_loop_thread_ = std::thread([this]() {

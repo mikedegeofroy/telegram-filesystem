@@ -18,6 +18,8 @@ class TelegramFileSystemService : public IFileSystemService {
  public:
   TelegramFileSystemService(
       std::shared_ptr<ITelegramIntegration> telegram_integration);
-  std::shared_ptr<FileSystemEntity> getEntitiesInPath(const std::string& path);
+  std::shared_ptr<FileSystemEntity> get_entities_in_path(const std::string& path);
+  void create_file(File file);
+  void write_file(File file);
   ~TelegramFileSystemService();
 };

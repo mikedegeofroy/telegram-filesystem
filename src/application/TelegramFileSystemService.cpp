@@ -57,7 +57,7 @@ TelegramFileSystemService::TelegramFileSystemService(
   telegram_integration_->start_event_loop();
 }
 
-std::shared_ptr<FileSystemEntity> TelegramFileSystemService::getEntitiesInPath(
+std::shared_ptr<FileSystemEntity> TelegramFileSystemService::get_entities_in_path(
     const std::string& path) {
   auto location = split_path(path);
 
@@ -79,6 +79,12 @@ std::shared_ptr<FileSystemEntity> TelegramFileSystemService::getEntitiesInPath(
   }
 
   return root;
+}
+
+void TelegramFileSystemService::create_file(File file) {
+}
+
+void TelegramFileSystemService::write_file(File file) {
 }
 
 TelegramFileSystemService::~TelegramFileSystemService() {}
