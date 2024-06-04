@@ -1,0 +1,19 @@
+{
+  "name": "C++ Dev Container",
+  "build": {
+    "dockerfile": "../Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools"
+      ],
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "cmake.cmakePath": "/usr/bin/cmake"
+      }
+    }
+  },
+  "remoteUser": "root"
+}

@@ -1,36 +1,40 @@
 #define FUSE_USE_VERSION 26
+#define FUSE_DEFAULT_MAX_BACKGROUND 120
 #include <fuse.h>
 
 #include <iostream>
+#include <memory>
 
-#include "telegram-integration.h"
+#include "./application/TelegramFileSystemService.h"
+#include "./application/models/Directory.h"
+#include "./infrastructure/TelegramIntegration.h"
 
-int myfs_getattr(const char *path, struct stat *stbuf) {
-  stbuf->st_mode = S_IFDIR | 00400;
-  return 0;
-}
+int main(int argc, char* argv[]) {
+  std::shared_ptr<ITelegramIntegration> telegram_integration(
+      new TelegramIntegration());
 
-int myfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-                 off_t offset, struct fuse_file_info *fi) {
-  std::cout << "wwha??\n";
+  std::shared_ptr<TelegramFileSystemService> fs(
+      new TelegramFileSystemService(telegram_integration));
 
-  filler(buf, "test", NULL, 0);
-  filler(buf, "test1", NULL, 0);
-  filler(buf, "test2", NULL, 0);
-  filler(buf, "test3", NULL, 0);
+  auto root = fs->get_entities_in_path("fs-");
+  std::shared_ptr<Directory> d = std::dynamic_pointer_cast<Directory>(root);
 
-  return 0;
-}
-
-static struct fuse_operations myOperations = {.getattr = myfs_getattr,
-                                              .readdir = myfs_readdir};
-
-int main(int argc, char *argv[]) {
-  // return fuse_main(argc, argv, &myOperations, 0);
-
-  TelegramIntegration *integration = new TelegramIntegration();
-
-  integration->test();
+  if (d != nullptr) {
+    for (auto& entity : d->entities) {
+      std::cout << entity->name << " : " << entity->path << "\n";
+      std::shared_ptr<Directory> dir =
+          std::dynamic_pointer_cast<Directory>(entity);
+      if (dir != nullptr) {
+        for (auto& dir_entity : dir->entities) {
+          std::shared_ptr<File> file =
+              std::dynamic_pointer_cast<File>(dir_entity);
+          if (file != nullptr) {
+            std::cout << ">>> " << file->local_path << "\n";
+          }
+        }
+      }
+    }
+  }
 
   return 0;
 }
