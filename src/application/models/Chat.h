@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-#include "Message.h";
+#include "Message.h"
 
 struct Chat {
   std::string name;
