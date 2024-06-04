@@ -6,15 +6,15 @@ project(
     LANGUAGES CXX
 )
 
-set(CMAKE_CXX_STANDARD 20)
+
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(PkgConfig REQUIRED)
 pkg_search_module(FUSE REQUIRED fuse)
 
-add_compile_options(-Wall -Weffc++ -pedantic -std=c++0x)
+add_compile_options(-Wall -Weffc++ -pedantic)
 
-include_directories(${FUSE_INCLUDE_DIRS})
-
+add_subdirectory(external/td)
 add_subdirectory(src)
