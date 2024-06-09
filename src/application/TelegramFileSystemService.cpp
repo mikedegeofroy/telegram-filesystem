@@ -57,12 +57,18 @@ TelegramFileSystemService::TelegramFileSystemService(
   telegram_integration_->start_event_loop();
 }
 
-std::shared_ptr<FileSystemEntity> TelegramFileSystemService::get_entities_in_path(
-    const std::string& path) {
+std::shared_ptr<FileSystemEntity>
+TelegramFileSystemService::get_entities_in_path(const std::string& path) {
   auto location = split_path(path);
 
   std::shared_ptr<Directory> root(new Directory());
-  auto chats = telegram_integration_->searchChats("fs-");
+  std::vector<Chat> chats;
+
+  if (location.empty()) {
+    chats = telegram_integration_->searchChats("fs-");
+  } else if (location.size() == 1) {
+    chats = telegram_integration_->searchChats(location[0]);
+  }
 
   for (auto& chat : chats) {
     std::shared_ptr<Directory> dir(new Directory());
@@ -75,16 +81,19 @@ std::shared_ptr<FileSystemEntity> TelegramFileSystemService::get_entities_in_pat
       dir->entities.push_back(file);
     }
 
-    root->entities.push_back(dir);
+    if (location.empty()) {
+      root->entities.push_back(dir);
+    } else {
+      root = dir;
+      break;
+    }
   }
 
   return root;
 }
 
-void TelegramFileSystemService::create_file(File file) {
-}
+void TelegramFileSystemService::create_file(File file) {}
 
-void TelegramFileSystemService::write_file(File file) {
-}
+void TelegramFileSystemService::write_file(File file) {}
 
 TelegramFileSystemService::~TelegramFileSystemService() {}

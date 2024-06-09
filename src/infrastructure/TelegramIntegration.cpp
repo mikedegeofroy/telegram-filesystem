@@ -5,6 +5,12 @@
 #include <iostream>
 #include <regex>
 #include <sstream>
+#include <fstream>
+
+void logT_message(const char* message) {
+  std::ofstream fout("/var/log/fslog", std::ios::app);
+  fout << message << "\n";
+}
 
 void TelegramIntegration::restart() {
   stop_event_loop();
@@ -325,10 +331,13 @@ void TelegramIntegration::auth_loop() {
   bool auth_needed = true;
 
   while (auth_needed) {
+    logT_message("auth_needed");
     if (need_restart_) {
       restart();
+      logT_message("restart");
     } else if (!are_authorized_) {
       process_response(client_manager_->receive(10));
+      logT_message("process_response");
     } else {
       auth_needed = false;
     }
