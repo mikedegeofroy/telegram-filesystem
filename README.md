@@ -46,3 +46,6 @@ If you are building localy use
 ```shell
 make build-local
 ```
+
+## Contributions
+I would like to thank [Etozheraf](https://github.com/Etozheraf) for helping me out in this project and writing most of the functions for fuse. If you'd like to contribute contact me at [@mikedegeofroy](https://t.me/mikedegeofroy).
