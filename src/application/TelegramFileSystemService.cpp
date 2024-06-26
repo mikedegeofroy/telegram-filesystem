@@ -2,21 +2,36 @@
 
 #include <regex>
 #include <sstream>
+#include <iostream>
 
 #include "./models/Directory.h"
 
+template<typename T>
+void logT_message(T message) {
+  std::cout << message << "\n";
+}
+
 std::vector<std::string> TelegramFileSystemService::split_path(
     const std::string& path) {
-  std::vector<std::string> exploded_path;
+  if (path == "/") {
+    return {};
+  }
 
+  std::vector<std::string> exploded_path;
   std::string tmp;
   std::stringstream ss(path);
 
   while (getline(ss, tmp, '/')) {
-    exploded_path.push_back(tmp);
+    if (!tmp.empty()) {
+      exploded_path.push_back(tmp);
+    }
   }
 
   return exploded_path;
+}
+
+std::string TelegramFileSystemService::file_to_string(const File& file) {
+  return "path: " + file.path + "\nsize: " + std::to_string(file.size) + "b";
 }
 
 File* TelegramFileSystemService::string_to_file(const std::string& input,
@@ -61,13 +76,26 @@ std::shared_ptr<FileSystemEntity>
 TelegramFileSystemService::get_entities_in_path(const std::string& path) {
   auto location = split_path(path);
 
-  std::shared_ptr<Directory> root(new Directory());
+  std::shared_ptr<Directory> root(nullptr);
   std::vector<Chat> chats;
 
   if (location.empty()) {
+    root = std::make_shared<Directory>();
     chats = telegram_integration_->searchChats("fs-");
   } else if (location.size() == 1) {
     chats = telegram_integration_->searchChats(location[0]);
+  } else if (location.size() == 2) {
+    chats = telegram_integration_->searchChats(location[0]);
+    for (auto& message : chats[0].messages) {
+      std::shared_ptr<File> file(string_to_file(
+          message.content, message.attachment, "/" + chats[0].name));
+      if (file->name == location[1]) {
+        if (file->local_path.empty())
+          file->local_path = "/root/customfs/build/src/tdlib/documents" + file->path;
+        return file;
+      }
+    }
+    return nullptr;
   }
 
   for (auto& chat : chats) {
@@ -92,8 +120,65 @@ TelegramFileSystemService::get_entities_in_path(const std::string& path) {
   return root;
 }
 
-void TelegramFileSystemService::create_file(File file) {}
+void TelegramFileSystemService::create_file(const std::string& path) {
+  Message msg;
+  auto location = split_path(path);
+  msg.content = "path: /" + location.back() + "\nsize: 0b";
+  msg.attachment = "/root/customfs/build/src/tdlib/documents" + path;
 
-void TelegramFileSystemService::write_file(File file) {}
+  auto chats = telegram_integration_->searchChats("fs-");
+
+  auto chat = std::find_if(chats.begin(), chats.end(),
+                           [&](Chat chat) { return location[0] == chat.name; });
+
+  telegram_integration_->send_message(chat->id, msg);
+}
+
+void TelegramFileSystemService::write_file(File* file) {
+  auto chats = telegram_integration_->searchChats("fs-");
+  auto location = split_path(file->path);
+
+  auto chat = std::find_if(chats.begin(), chats.end(),
+                           [&](Chat chat) { return location[0] == chat.name; });
+
+  for (auto& message : chat->messages) {
+    std::shared_ptr<File> message_file(
+        string_to_file(message.content, message.attachment, "/" + chat->name));
+    if (message_file->path == file->path) {
+      
+      Message outbound;
+      outbound.content = file_to_string(*message_file);
+      outbound.attachment = file->local_path;
+
+      telegram_integration_->edit_message(message.id, chat->id, outbound);
+      break;
+    }
+  }
+}
+
+void TelegramFileSystemService::move_file(File* from, const std::string& to) {
+  File* file_to = from;
+  file_to->path = to;
+
+  write_file(file_to);
+  delete_file(from);
+}
+
+void TelegramFileSystemService::delete_file(File* file) {
+  auto chats = telegram_integration_->searchChats("fs-");
+  auto location = split_path(file->path);
+
+  auto chat = std::find_if(chats.begin(), chats.end(),
+                           [&](Chat chat) { return location[0] == chat.name; });
+
+  for (auto& message : chat->messages) {
+    std::shared_ptr<File> message_file(
+        string_to_file(message.content, message.attachment, "/" + chat->name));
+    if (message_file->path == file->path) {
+      telegram_integration_->delete_messages(chat->id, {message.id});
+      break;
+    }
+  }
+}
 
 TelegramFileSystemService::~TelegramFileSystemService() {}

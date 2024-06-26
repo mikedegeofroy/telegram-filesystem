@@ -1,13 +1,12 @@
 #include "TelegramIntegration.h"
 
+#include <fstream>
 #include <functional>
-// #include <future>
 #include <iostream>
 #include <regex>
 #include <sstream>
-#include <fstream>
 
-void logT_message(const char* message) {
+void logT_message(const char *message) {
   std::ofstream fout("/var/log/fslog", std::ios::app);
   fout << message << "\n";
 }
@@ -162,8 +161,8 @@ void TelegramIntegration::on_authorization_state_update() {
             request->database_directory_ = "tdlib";
             request->use_message_database_ = true;
             request->use_secret_chats_ = true;
-            request->api_id_ = 94575;
-            request->api_hash_ = "a3406de8d171bb422bb6ddf3bbd800e2";
+            request->api_id_ = 16731492;
+            request->api_hash_ = "8eef29fcf2db51e82f0a93069cc46ea1";
             request->system_language_code_ = "en";
             request->device_model_ = "Desktop";
             request->application_version_ = "1.0";
@@ -202,6 +201,7 @@ Chat TelegramIntegration::getChat(int64_t chat_id) {
     }
     auto chat = td::move_tl_object_as<td_api::chat>(object);
 
+    result.id = chat->id_;
     result.name = chat->title_;
     result.messages = getChatMessages(chat_id);
   }));
@@ -287,7 +287,7 @@ std::vector<Message> TelegramIntegration::getChatMessages(int64_t chat_id,
   return results;
 }
 
-std::string TelegramIntegration::download_file(int32_t file_id) {
+std::string TelegramIntegration::download_file(int64_t file_id) {
   std::string local_path;
 
   std::shared_ptr<Query> query(new Query([&](Object object) {
@@ -307,7 +307,62 @@ std::string TelegramIntegration::download_file(int32_t file_id) {
   return local_path;
 }
 
-void TelegramIntegration::send_message(Chat chat) {}
+void TelegramIntegration::send_message(std::int64_t chat_id, Message content) {
+  std::shared_ptr<Query> query(new Query([&](Object object) {
+    if (object->get_id() == td_api::error::ID) {
+      return;
+    }
+  }));
+
+  auto send_message = td_api::make_object<td_api::sendMessage>();
+  send_message->chat_id_ = chat_id;
+  auto message_content = td_api::make_object<td_api::inputMessageText>();
+  message_content->text_ = td_api::make_object<td_api::formattedText>();
+  message_content->text_->text_ = std::move(content.content);
+  send_message->input_message_content_ = std::move(message_content);
+
+  send_query(std::move(send_message), query);
+}
+
+void TelegramIntegration::edit_message(std::int64_t message_id,
+                                       std::int64_t chat_id, Message content) {
+  std::shared_ptr<Query> query(new Query([&](Object object) {
+    if (object->get_id() == td_api::error::ID) {
+      return;
+    }
+  }));
+
+  auto edit = td_api::make_object<td_api::editMessageMedia>();
+  edit->chat_id_ = chat_id;
+  edit->message_id_ = message_id;
+
+  auto document = td_api::make_object<td_api::inputMessageDocument>();
+  logT_message(document->caption_->text_.data());
+  logT_message(content.content.data());
+  document->caption_->text_ = content.content;
+
+  auto file = td_api::make_object<td_api::inputFileLocal>();
+  file->path_ = content.attachment;
+  document->document_ = std::move(file);
+  edit->input_message_content_ = std::move(document);
+
+  send_query(std::move(edit), query);
+}
+
+void TelegramIntegration::delete_messages(
+    std::int64_t chat_id, std::vector<std::int64_t> message_ids) {
+  std::shared_ptr<Query> query(new Query([&](Object object) {
+    if (object->get_id() == td_api::error::ID) {
+      return;
+    }
+  }));
+
+  auto delete_messages = td_api::make_object<td_api::deleteMessages>();
+  delete_messages->chat_id_ = chat_id;
+  delete_messages->message_ids_ = message_ids;
+
+  send_query(std::move(delete_messages), query);
+}
 
 void TelegramIntegration::start_event_loop() {
   event_loop_thread_ = std::thread([this]() {
