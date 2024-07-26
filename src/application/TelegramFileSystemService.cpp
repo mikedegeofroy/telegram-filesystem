@@ -7,8 +7,9 @@
 #include "./models/Directory.h"
 
 template<typename T>
-void logT_message(T message) {
-  std::cout << message << "\n";
+void logT_message(T message, std::string del = "\n") {
+  std::ofstream fout("/var/log/fslog", std::ios::app);
+  fout << message << del;
 }
 
 std::vector<std::string> TelegramFileSystemService::split_path(
@@ -82,10 +83,14 @@ TelegramFileSystemService::get_entities_in_path(const std::string& path) {
   if (location.empty()) {
     root = std::make_shared<Directory>();
     chats = telegram_integration_->searchChats("fs-");
-  } else if (location.size() == 1) {
+  } else if (location.size() >= 1) {
     chats = telegram_integration_->searchChats(location[0]);
-  } else if (location.size() == 2) {
-    chats = telegram_integration_->searchChats(location[0]);
+    if (chats.empty() || location[0] != chats[0].name) {
+      return nullptr;
+    }
+  } 
+  
+  if (location.size() == 2) {
     for (auto& message : chats[0].messages) {
       std::shared_ptr<File> file(string_to_file(
           message.content, message.attachment, "/" + chats[0].name));

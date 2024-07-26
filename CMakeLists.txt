@@ -12,9 +12,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(PkgConfig REQUIRED)
+find_package(Td REQUIRED)
 pkg_search_module(FUSE REQUIRED fuse)
 
 add_compile_options(-Wall -Weffc++ -pedantic)
 
-add_subdirectory(external/td)
+# add_subdirectory(external/td)
 add_subdirectory(src)

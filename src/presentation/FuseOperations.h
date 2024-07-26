@@ -16,12 +16,12 @@ std::shared_ptr<IFileSystemService> fs_service;
 std::shared_ptr<ITelegramIntegration> tg_integration;
 
 template<typename T>
-void log_message(T message) {
-  std::cout << message << "\n";
+void log_message(T message, std::string del = "\n") {
+  std::ofstream fout("/var/log/fslog", std::ios::app);
+  fout << message << del;
 }
 
 void* myfs_init(struct fuse_conn_info* conn) {
-  log_message("init called");
   if (!tg_integration) {
     tg_integration = std::make_shared<TelegramIntegration>();
   }
@@ -32,12 +32,12 @@ void* myfs_init(struct fuse_conn_info* conn) {
 }
 
 void myfs_destroy(void* private_data) {
-  log_message("destroy called");
   fs_service.reset();
   tg_integration.reset();
 }
 
 int myfs_getattr(const char* path, struct stat* stbuf) {
+  log_message("myfs_getattr start");
   std::memset(stbuf, 0, sizeof(struct stat));
 
   auto ptr = fs_service->get_entities_in_path(std::string(path));
@@ -58,6 +58,7 @@ int myfs_getattr(const char* path, struct stat* stbuf) {
     return -errno;
   }
 
+  log_message("myfs_getattr end");
   return 0;
 }
 
@@ -84,6 +85,7 @@ int myfs_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
 }
 
 int myfs_open(const char* path, struct fuse_file_info* fi) {
+  log_message("myfs_open start");
   auto ptr = fs_service->get_entities_in_path(std::string(path));
 
   if (!ptr.get()) {
@@ -101,11 +103,12 @@ int myfs_open(const char* path, struct fuse_file_info* fi) {
   //   std::ios::trunc);
   // }
 
+  log_message("myfs_open end");
   return 0;
 }
 
 int myfs_truncate(const char* path, off_t size) {
-  log_message("Truncate start");
+  log_message("myfs_truncate start");
   auto ptr = fs_service->get_entities_in_path(std::string(path));
   if (!ptr.get()) {
     errno = ENOENT;
@@ -136,7 +139,7 @@ int myfs_truncate(const char* path, off_t size) {
   }
 
   fs_service->write_file(file);
-  log_message("Truncate end");
+  log_message("myfs_truncate end");
   return 0;
 }
 
@@ -169,10 +172,10 @@ int myfs_read(const char* path, char* buf, size_t size, off_t offset,
 
 int myfs_write(const char* path, const char* buf, size_t size, off_t offset,
                struct fuse_file_info* fi) {
-  log_message("Write start");
-  log_message(path);
-  log_message(buf);
-  log_message(size);
+  log_message("myfs_write start", " ");
+  log_message(path, " ");
+  log_message(buf, " ");
+  log_message(size, " ");
   log_message(offset);
 
   auto ptr = fs_service->get_entities_in_path(std::string(path));
@@ -185,9 +188,9 @@ int myfs_write(const char* path, const char* buf, size_t size, off_t offset,
     errno = EINVAL;
     return -errno;
   }
-  log_message(file->local_path);
-  log_message(file->name);
-  log_message(file->path);
+  log_message(file->local_path, " ");
+  log_message(file->name, " ");
+  log_message(file->path, " ");
   log_message(file->size);
   std::ofstream file_d;
   if (offset == 0) {
@@ -198,14 +201,16 @@ int myfs_write(const char* path, const char* buf, size_t size, off_t offset,
   file_d.write(buf, size);
   file_d.close();
 
-  log_message("write_file start");
+  log_message("fs_service->write_file start");
   fs_service->write_file(file);
-  log_message("Write end");
+  log_message("myfs_write end");
   return size;
 }
 
 int myfs_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
+  log_message("myfs_create start");
   fs_service->create_file(std::string(path));
+  log_message("myfs_create end");
   return 0;
 }
 

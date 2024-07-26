@@ -6,10 +6,10 @@
 #include <regex>
 #include <sstream>
 
-void logT_message(const char *message) {
-  std::ofstream fout("/var/log/fslog", std::ios::app);
-  fout << message << "\n";
-}
+// void logT_message(const char *message) {
+//   std::ofstream fout("/var/log/fslog", std::ios::app);
+//   fout << message << "\n";
+// }
 
 void TelegramIntegration::restart() {
   stop_event_loop();
@@ -337,8 +337,8 @@ void TelegramIntegration::edit_message(std::int64_t message_id,
   edit->message_id_ = message_id;
 
   auto document = td_api::make_object<td_api::inputMessageDocument>();
-  logT_message(document->caption_->text_.data());
-  logT_message(content.content.data());
+  // logT_message(document->caption_->text_.data());
+  // logT_message(content.content.data());
   document->caption_->text_ = content.content;
 
   auto file = td_api::make_object<td_api::inputFileLocal>();
@@ -386,13 +386,13 @@ void TelegramIntegration::auth_loop() {
   bool auth_needed = true;
 
   while (auth_needed) {
-    logT_message("auth_needed");
+    // logT_message("auth_needed");
     if (need_restart_) {
       restart();
-      logT_message("restart");
+      // logT_message("restart");
     } else if (!are_authorized_) {
       process_response(client_manager_->receive(10));
-      logT_message("process_response");
+      // logT_message("process_response");
     } else {
       auth_needed = false;
     }
